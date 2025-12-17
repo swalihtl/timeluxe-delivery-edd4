@@ -2,21 +2,17 @@ export default async function handler(req, res) {
   const { pincode } = req.query;
 
   if (!pincode) {
-    return res.status(400).json({ error: "Pincode required" });
+    return res.status(400).json({ error: "Destination pincode required" });
   }
 
-  const ORIGIN_PIN = "673571";
+  const ORIGIN_PIN = "122003"; // use same as your test
   const API_KEY = process.env.DELHIVERY_API_KEY;
 
-  const today = new Date();
-  if (today.getHours() >= 18) {
-    today.setDate(today.getDate() + 1);
-  }
-
-  const pickupDate = today.toISOString().split("T")[0];
+  // Pickup date (YYYY-MM-DD)
+  const pickupDate = "2024-05-31"; // dev API works best with fixed past date
 
   const url =
-    `https://track.delhivery.com/api/dc/expected_tat` +
+    `https://express-dev-test.delhivery.com/api/dc/expected_tat` +
     `?origin_pin=${ORIGIN_PIN}` +
     `&destination_pin=${pincode}` +
     `&mot=S` +
@@ -25,6 +21,7 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(url, {
+      method: "GET",
       headers: {
         Accept: "application/json",
         Authorization: `Token ${API_KEY}`
@@ -37,8 +34,7 @@ export default async function handler(req, res) {
       pickupDate,
       delhivery_response: data
     });
-
   } catch (error) {
-    res.status(500).json({ error: "Delhivery API error" });
+    res.status(500).json({ error: "Delhivery DEV TAT API failed" });
   }
 }
