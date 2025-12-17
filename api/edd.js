@@ -5,16 +5,17 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Destination pincode required" });
   }
 
-  const ORIGIN_PIN = "673571";
+  const ORIGIN_PIN = "673571"; // your pickup pincode
   const API_KEY = process.env.DELHIVERY_API_KEY;
 
-  const url =
-    `https://track.delhivery.com/api/dc/expected_tat` +
-    `?origin_pin=${ORIGIN_PIN}` +
-    `&destination_pin=${pincode}` +
-    `&mot=S`;
-
   try {
+    // 1️⃣ Call Delhivery Expected TAT API
+    const url =
+      `https://track.delhivery.com/api/dc/expected_tat` +
+      `?origin_pin=${ORIGIN_PIN}` +
+      `&destination_pin=${pincode}` +
+      `&mot=S`;
+
     const response = await fetch(url, {
       headers: {
         Accept: "application/json",
@@ -33,21 +34,27 @@ export default async function handler(req, res) {
       });
     }
 
-    // Dispatch logic (after 6 PM = next day)
-    const deliveryDate = new Date();
-    if (deliveryDate.getHours() >= 18) {
-      deliveryDate.setDate(deliveryDate.getDate() + 1);
+    // 2️⃣ Dispatch date logic (6 PM cutoff)
+    const now = new Date();
+    const dispatchDate = new Date(now);
+
+    if (now.getHours() >= 18) {
+      dispatchDate.setDate(dispatchDate.getDate() + 1);
     }
 
+    // 3️⃣ Delivery date = dispatch date + TAT days
+    const deliveryDate = new Date(dispatchDate);
     deliveryDate.setDate(deliveryDate.getDate() + tatDays);
 
-    res.status(200).json({
+    // 4️⃣ Final response
+    return res.status(200).json({
       tat_days: tatDays,
+      dispatch_date: dispatchDate.toDateString(),
       delivery_date: deliveryDate.toDateString()
     });
 
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       error: "Delhivery Expected TAT API failed"
     });
   }
