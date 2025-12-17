@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Destination pincode required" });
   }
 
-  const ORIGIN_PIN = "673571"; // your pickup pincode
+  const ORIGIN_PIN = "673571";
   const API_KEY = process.env.DELHIVERY_API_KEY;
 
   const url =
@@ -16,7 +16,6 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(url, {
-      method: "GET",
       headers: {
         Accept: "application/json",
         Authorization: `Token ${API_KEY}`
@@ -25,21 +24,28 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // Extract expected delivery date safely
-    const expectedDate =
-      data?.data?.[0]?.expected_delivery_date ||
-      data?.data?.expected_delivery_date;
+    const tatDays = data?.data?.tat;
 
-    if (!expectedDate) {
+    if (!tatDays) {
       return res.status(404).json({
-        error: "Expected delivery date not available",
+        error: "TAT not available",
         raw: data
       });
     }
 
+    // Dispatch logic (after 6 PM = next day)
+    const deliveryDate = new Date();
+    if (deliveryDate.getHours() >= 18) {
+      deliveryDate.setDate(deliveryDate.getDate() + 1);
+    }
+
+    deliveryDate.setDate(deliveryDate.getDate() + tatDays);
+
     res.status(200).json({
-      delivery_date: expectedDate
+      tat_days: tatDays,
+      delivery_date: deliveryDate.toDateString()
     });
+
   } catch (error) {
     res.status(500).json({
       error: "Delhivery Expected TAT API failed"
