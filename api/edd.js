@@ -1,4 +1,15 @@
 export default async function handler(req, res) {
+
+  // ✅ CORS HEADERS (THIS FIXES SHOPIFY ISSUE)
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  // Handle preflight request
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   const { pincode } = req.query;
 
   if (!pincode) {
@@ -24,7 +35,6 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // ✅ CORRECT FIELD
     const tatDays = data?.data?.tat;
 
     if (!tatDays) {
@@ -46,7 +56,6 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       tat_days: tatDays,
-      dispatch_date: dispatchDate.toDateString(),
       delivery_date: deliveryDate.toDateString()
     });
 
