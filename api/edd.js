@@ -1,6 +1,10 @@
 export default async function handler(req, res) {
   const { pincode } = req.query;
 
+  if (!pincode) {
+    return res.status(400).json({ error: "Pincode required" });
+  }
+
   const ORIGIN_PIN = "673571";
   const API_KEY = process.env.DELHIVERY_API_KEY;
 
@@ -12,7 +16,7 @@ export default async function handler(req, res) {
   const pickupDate = today.toISOString().split("T")[0];
 
   const url =
-    `https://express-dev-test.delhivery.com/api/dc/expected_tat` +
+    `https://track.delhivery.com/api/dc/expected_tat` +
     `?origin_pin=${ORIGIN_PIN}` +
     `&destination_pin=${pincode}` +
     `&mot=S` +
@@ -29,13 +33,12 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // 👇 SEND FULL RESPONSE TO BROWSER
     res.status(200).json({
       pickupDate,
       delhivery_response: data
     });
 
   } catch (error) {
-    res.status(500).json({ error: "API failed" });
+    res.status(500).json({ error: "Delhivery API error" });
   }
 }
