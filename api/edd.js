@@ -1,14 +1,9 @@
 export default async function handler(req, res) {
   const { pincode } = req.query;
 
-  if (!pincode) {
-    return res.status(400).json({ error: "Pincode required" });
-  }
-
-  const ORIGIN_PIN = "673571"; // your pickup pincode
+  const ORIGIN_PIN = "673571";
   const API_KEY = process.env.DELHIVERY_API_KEY;
 
-  // Pickup date = today (YYYY-MM-DD)
   const today = new Date();
   if (today.getHours() >= 18) {
     today.setDate(today.getDate() + 1);
@@ -34,18 +29,13 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    const tatDate =
-      data?.data?.[0]?.expected_delivery_date ||
-      data?.data?.[0]?.edd;
-
-    if (!tatDate) {
-      return res.status(404).json({ error: "TAT not available" });
-    }
-
+    // 👇 SEND FULL RESPONSE TO BROWSER
     res.status(200).json({
-      delivery_date: tatDate
+      pickupDate,
+      delhivery_response: data
     });
+
   } catch (error) {
-    res.status(500).json({ error: "Delhivery TAT API error" });
+    res.status(500).json({ error: "API failed" });
   }
 }
