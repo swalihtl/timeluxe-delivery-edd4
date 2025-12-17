@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // 🔴 REQUIRED FOR SHOPIFY
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -9,15 +8,13 @@ export default async function handler(req, res) {
   }
 
   const { pincode } = req.query;
-
   if (!pincode || pincode.length !== 6) {
     return res.status(400).json({ available: false });
   }
 
-  // ⏰ DISPATCH LOGIC
+  // Dispatch logic
   const now = new Date();
   const dispatchDate = new Date(now);
-
   if (now.getHours() >= 18) {
     dispatchDate.setDate(dispatchDate.getDate() + 1);
   }
@@ -34,21 +31,25 @@ export default async function handler(req, res) {
 
     const j = await r.json();
 
-    if (!j?.data?.tat) {
+    // 🔥 THIS IS THE FIX
+    const tat = j?.data?.tat;
+
+    if (!tat || tat < 1) {
       return res.status(200).json({ available: false });
     }
 
     const deliveryDate = new Date(dispatchDate);
-    deliveryDate.setDate(deliveryDate.getDate() + j.data.tat);
+    deliveryDate.setDate(deliveryDate.getDate() + tat);
 
     return res.status(200).json({
       available: true,
-      tat_days: j.data.tat,
+      tat_days: tat,
       dispatch_date: dispatchDate.toDateString(),
-      delivery_date: deliveryDate.toDateString()
+      delivery_date: deliveryDate.toDateString(),
+      raw: j
     });
 
-  } catch (err) {
+  } catch (e) {
     return res.status(500).json({ available: false });
   }
 }
