@@ -1,65 +1,54 @@
 export default async function handler(req, res) {
-
-  // ✅ CORS HEADERS (THIS FIXES SHOPIFY ISSUE)
+  // 🔴 REQUIRED FOR SHOPIFY
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Handle preflight request
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
   const { pincode } = req.query;
 
-  if (!pincode) {
-    return res.status(400).json({ error: "Destination pincode required" });
+  if (!pincode || pincode.length !== 6) {
+    return res.status(400).json({ available: false });
   }
 
-  const ORIGIN_PIN = "673571";
-  const API_KEY = process.env.DELHIVERY_API_KEY;
+  // ⏰ DISPATCH LOGIC
+  const now = new Date();
+  const dispatchDate = new Date(now);
+
+  if (now.getHours() >= 18) {
+    dispatchDate.setDate(dispatchDate.getDate() + 1);
+  }
+
+  const url = `https://track.delhivery.com/api/dc/expected_tat?origin_pin=673571&destination_pin=${pincode}&mot=S`;
 
   try {
-    const url =
-      `https://track.delhivery.com/api/dc/expected_tat` +
-      `?origin_pin=${ORIGIN_PIN}` +
-      `&destination_pin=${pincode}` +
-      `&mot=S`;
-
-    const response = await fetch(url, {
+    const r = await fetch(url, {
       headers: {
-        Accept: "application/json",
-        Authorization: `Token ${API_KEY}`
+        Authorization: `Token ${process.env.DELHIVERY_API_KEY}`,
+        Accept: "application/json"
       }
     });
 
-    const data = await response.json();
+    const j = await r.json();
 
-    const tatDays = data?.data?.tat;
-
-    if (!tatDays) {
-      return res.status(404).json({
-        error: "TAT not available",
-        raw: data
-      });
-    }
-
-    // 6 PM dispatch rule
-    const now = new Date();
-    const dispatchDate = new Date(now);
-    if (now.getHours() >= 18) {
-      dispatchDate.setDate(dispatchDate.getDate() + 1);
+    if (!j?.data?.tat) {
+      return res.status(200).json({ available: false });
     }
 
     const deliveryDate = new Date(dispatchDate);
-    deliveryDate.setDate(deliveryDate.getDate() + tatDays);
+    deliveryDate.setDate(deliveryDate.getDate() + j.data.tat);
 
     return res.status(200).json({
-      tat_days: tatDays,
+      available: true,
+      tat_days: j.data.tat,
+      dispatch_date: dispatchDate.toDateString(),
       delivery_date: deliveryDate.toDateString()
     });
 
   } catch (err) {
-    return res.status(500).json({ error: "Delhivery API failed" });
+    return res.status(500).json({ available: false });
   }
 }
