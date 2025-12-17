@@ -5,11 +5,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Destination pincode required" });
   }
 
-  const ORIGIN_PIN = "673571"; // your pickup pincode
+  const ORIGIN_PIN = "673571";
   const API_KEY = process.env.DELHIVERY_API_KEY;
 
   try {
-    // 1️⃣ Call Delhivery Expected TAT API
     const url =
       `https://track.delhivery.com/api/dc/expected_tat` +
       `?origin_pin=${ORIGIN_PIN}` +
@@ -25,6 +24,7 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
+    // ✅ CORRECT FIELD
     const tatDays = data?.data?.tat;
 
     if (!tatDays) {
@@ -34,28 +34,23 @@ export default async function handler(req, res) {
       });
     }
 
-    // 2️⃣ Dispatch date logic (6 PM cutoff)
+    // 6 PM dispatch rule
     const now = new Date();
     const dispatchDate = new Date(now);
-
     if (now.getHours() >= 18) {
       dispatchDate.setDate(dispatchDate.getDate() + 1);
     }
 
-    // 3️⃣ Delivery date = dispatch date + TAT days
     const deliveryDate = new Date(dispatchDate);
     deliveryDate.setDate(deliveryDate.getDate() + tatDays);
 
-    // 4️⃣ Final response
     return res.status(200).json({
       tat_days: tatDays,
       dispatch_date: dispatchDate.toDateString(),
       delivery_date: deliveryDate.toDateString()
     });
 
-  } catch (error) {
-    return res.status(500).json({
-      error: "Delhivery Expected TAT API failed"
-    });
+  } catch (err) {
+    return res.status(500).json({ error: "Delhivery API failed" });
   }
 }
